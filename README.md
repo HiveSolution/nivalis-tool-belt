@@ -2,7 +2,7 @@
 
 A multi-tool sandbox mod for Nivalis Nights (BepInEx 6, IL2CPP). Press **F1** in-game to open the menu.
 
-The menu has six tabs.
+The menu has seven tabs.
 
 **Move**
 
@@ -41,6 +41,19 @@ Some furniture exists in several variants with the same name, so those appear mo
 | Friend / Business / Romance / Enemy | **-** and **+** for each of the four relationship levels (0 to 5) with the selected character. |
 
 Relationship levels feed into the story, so changing them can open or close dialogue options.
+
+**Venues**
+
+| Tool | What it does |
+| --- | --- |
+| List | Your venues first, then the venues the game lets the player acquire. Venues run by other owners are not listed. |
+| Level | **-** and **+** for the level (1 to 5) of a venue you hold. |
+| Take over for free | Makes an acquirable venue yours, as a purchase, without paying. |
+| Give up this venue | Hands a venue back. Not offered for your starting venue. |
+
+These go through the game's own ownership handling, but they skip its purchase flow, so anything
+the story ties to buying a venue does not happen. Try it on a spare save first. Apartments and
+greenhouses are not covered.
 
 **Time**
 
@@ -99,6 +112,7 @@ dotnet build -c Release -p:Deploy=true
 - `src/Character.cs`: money, debt, inspiration points, skill levels, boat.
 - `src/Items.cs`: item search and adding items.
 - `src/People.cs`: relationship levels.
+- `src/Venues.cs`: venue level and ownership.
 - `src/Clock.cs`: clock tools.
 - `src/Teleports.cs`: saved spots.
 - `src/SelfTest.cs`: scripted in-game test, only compiled with `-p:SelfTest=true`.

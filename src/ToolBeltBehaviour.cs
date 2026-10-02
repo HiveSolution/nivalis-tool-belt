@@ -23,11 +23,12 @@ public class ToolBeltBehaviour : MonoBehaviour
 
     private const int MaxVisibleItems = 8;
     private const int MaxVisiblePeople = 6;
+    private const int MaxVisibleVenues = 6;
     private const int DebtStep = 1000;
     private const int MaxFieldLength = 40;
-    private const int TabsPerRow = 3;
+    private const int TabsPerRow = 4;
 
-    private static readonly string[] Tabs = { "Move", "Player", "Items", "People", "Time", "Teleport" };
+    private static readonly string[] Tabs = { "Move", "Player", "Items", "People", "Venues", "Time", "Teleport" };
     private static readonly int[] MoneySteps = { -1000, -100, 100, 1000, 10000 };
     private static readonly string[] MoneyLabels = { "-1k", "-100", "+100", "+1k", "+10k" };
     private static readonly float[] ClockSpeeds = { 0.25f, 0.5f, 1f, 2f, 5f, 10f };
@@ -46,6 +47,8 @@ public class ToolBeltBehaviour : MonoBehaviour
     private Vector2 _personScroll;
     private string _personQuery = "";
     private PersonEntry _person;
+    private Vector2 _venueScroll;
+    private VenueEntry _venue;
     private string _focusedField;
     private bool _typing;
     private Il2CppSystem.Collections.Generic.List<InputAction> _mutedActions;
@@ -205,6 +208,7 @@ public class ToolBeltBehaviour : MonoBehaviour
                 case "Player": DrawPlayer(); break;
                 case "Items": DrawItems(); break;
                 case "People": DrawPeople(); break;
+                case "Venues": DrawVenues(); break;
                 case "Time": DrawTime(); break;
                 default: DrawTeleport(); break;
             }
@@ -391,6 +395,58 @@ public class ToolBeltBehaviour : MonoBehaviour
             int level = People.Get(_person, kind);
             int change = Stepper(kind, $"{level} / {People.MaxLevel}", "-", "+");
             if (change != 0) People.Set(_person, kind, level + change);
+        }
+    }
+
+    private void DrawVenues()
+    {
+        var venues = Venues.List();
+        Heading("Venues", venues.Count == 1 ? "1 venue" : $"{venues.Count} venues");
+        if (venues.Count == 0)
+        {
+            GUI.Label(Row(), "No venues found.", Theme.Label);
+            return;
+        }
+
+        const float line = RowHeight + RowGap;
+        int visible = Mathf.Min(venues.Count, MaxVisibleVenues);
+        bool scrolls = venues.Count > MaxVisibleVenues;
+        float listWidth = Width - 2f * Pad;
+        float innerWidth = scrolls ? listWidth - 14f : listWidth;
+        var area = new Rect(Pad, _y, listWidth, visible * line);
+        _y += area.height;
+
+        if (scrolls) _venueScroll = GUI.BeginScrollView(area, _venueScroll, new Rect(0f, 0f, innerWidth, venues.Count * line));
+        for (int i = 0; i < venues.Count; i++)
+        {
+            float x = scrolls ? 0f : area.x;
+            float y = (scrolls ? 0f : area.y) + i * line;
+            string label = Venues.IsMine(venues[i]) ? venues[i].Name + "  (yours)" : venues[i].Name;
+            if (Button(new Rect(x, y, innerWidth, RowHeight), label, venues[i] == _venue)) _venue = venues[i];
+        }
+        if (scrolls) GUI.EndScrollView();
+
+        if (_venue == null || !venues.Contains(_venue))
+        {
+            _venue = null;
+            GUI.Label(Row(20f), "Pick a venue. Yours are listed first.", Theme.Hint);
+            return;
+        }
+
+        _y += SectionGap;
+        if (Venues.IsMine(_venue))
+        {
+            Heading(_venue.Name, "Yours");
+            int level = Venues.GetLevel(_venue);
+            int change = Stepper("Level", $"{level} / {Venues.MaxLevel(_venue)}", "-", "+");
+            if (change != 0) Venues.SetLevel(_venue, level + change);
+            if (Venues.IsStartingVenue(_venue)) GUI.Label(Row(20f), "Your starting venue cannot be given up here.", Theme.Hint);
+            else if (Button(Row(), "Give up this venue")) Venues.GiveUp(_venue);
+        }
+        else
+        {
+            Heading(_venue.Name, "Not yours");
+            if (Button(Row(), "Take over for free")) Venues.TakeOver(_venue);
         }
     }
 

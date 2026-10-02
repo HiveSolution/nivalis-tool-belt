@@ -114,12 +114,34 @@ internal static class SelfTest
                 int storable = 0;
                 for (int i = 0; i < database.Length; i++) if (database[i] != null && database[i].IsPlayerStorable) storable++;
                 Write($"items total={database.Length} storable={storable} listed={Items.Find("").Count}");
+                if (Singleton<PropertyManager>.InstanceExist())
+                {
+                    var manager = Singleton<PropertyManager>.Instance;
+                    var states = manager._propertyStates;
+                    for (int i = 0; i < states.Count; i++)
+                    {
+                        try
+                        {
+                            var ghost = states[i];
+                            var property = ghost.Property;
+                            var venue = property.TryCast<Nivalis.GhostSystem.CustomerLoop.Venue>();
+                            string line = $"property '{property.GetName()}' asset='{property.name}' kind={property.GetIl2CppType().Name} own={property.OwnershipType} playerOwned={property.PlayerOwned} acquireable={property.IsAcquireable} buy={property.BuyCost}/{manager.GetBuyPrice(property)} rent={property.RentCost}/{property.GetRentPrice()} daily={ghost.DailyCost}";
+                            if (venue != null)
+                                line += $" level={venue.RuntimeData.currentLevel}/{venue.LevellingData.Length} debt={venue.CurrentDebt} owner={(venue.Owner == null ? "none" : venue.Owner.DisplayedName)} tier={venue.Tier} starting={venue.StartingVenue} staff={venue.RuntimeData.staff.Count}";
+                            Write(line);
+                        }
+                        catch (Exception e)
+                        {
+                            Write($"property {i} failed: {e.Message}");
+                        }
+                    }
+                }
             }
             string character = "";
             var skills = Character.Skills;
             if (skills != null && c != null)
             {
-                character = $"typing={menu.IsTyping} bag={Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.ItemCount}/{Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.StackCount} last='{Items.LastResult}' debt={Character.GetCounter(Character.NoodleBarDebt)}/{Character.GetCounter(Character.OtherDebt)} insp={Character.GetCounter(Character.InspirationPoints)} alfie={AlfieVector()} cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
+                character = $"typing={menu.IsTyping} bag={Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.ItemCount}/{Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.StackCount} last='{Items.LastResult}' debt={Character.GetCounter(Character.NoodleBarDebt)}/{Character.GetCounter(Character.OtherDebt)} insp={Character.GetCounter(Character.InspirationPoints)} alfie={AlfieVector()} venues={VenueSummary()} cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
                 for (int i = 0; i < skills.Length; i++)
                 {
                     var xp = Singleton<Nivalis.SkillSystem.SkillLevelController>.Instance.GetPlayerSkillExperience(skills[i]);
@@ -134,6 +156,15 @@ internal static class SelfTest
         {
             Write($"status failed: {e}");
         }
+    }
+
+    private static string VenueSummary()
+    {
+        string text = "";
+        var player = Singleton<PlayerManager>.Instance.LocalPlayer;
+        foreach (var entry in Venues.List())
+            if (Venues.IsMine(entry) || entry.Name == "Sake Bar") text += $"[{entry.Name} mine={Venues.IsMine(entry)} state={player.GetPropertyOwnershipState(entry.Venue)} lvl={Venues.GetLevel(entry)} staff={entry.Venue.RuntimeData.staff.Count}]";
+        return text + $" owned={player.GetNumberOfOwnedVenues()}";
     }
 
     private static string AlfieVector()

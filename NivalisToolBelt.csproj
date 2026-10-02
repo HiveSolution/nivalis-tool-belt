@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>NivalisToolBelt</AssemblyName>
     <RootNamespace>NivalisToolBelt</RootNamespace>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <DebugType>none</DebugType>
