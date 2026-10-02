@@ -5,13 +5,11 @@ using ControllerState = Nivalis.PlayerCharacterController.ControllerState;
 namespace NivalisToolBelt;
 
 /// <summary>
-/// Sandbox features. Everything here drives hooks the game already ships
-/// (its own no-clip controller state and time manager), nothing is simulated.
+/// Player tools. Everything here drives hooks the game already ships
+/// (its own no-clip controller state and speeds), nothing is simulated.
 /// </summary>
 internal static class Sandbox
 {
-    private const int SecondsInHour = 3600;
-
     // The game's own speeds, captured per controller so the multiplier can be undone.
     private static PlayerCharacterController _speedOwner;
     private static float _baseMoveSpeed;
@@ -20,6 +18,7 @@ internal static class Sandbox
 
     private const float FallRescueSpeed = 30f;
     private static PlayerCharacterController _safeOwner;
+    private static string _safeScene;
     private static Vector3 _safePosition;
     private static Quaternion _safeRotation;
     private static bool _hasSafeSpot;
@@ -54,8 +53,16 @@ internal static class Sandbox
             controller.ToggleNoClip();
             if (Fly != value) controller.State = value ? ControllerState.NoClip : ControllerState.Normal;
             Plugin.Logger.LogInfo($"Fly / ghost mode {(Fly ? "on" : "off")}");
-            if (!Fly && _hasSafeSpot && controller == _safeOwner && !controller.RaycastCheckGround(controller.transform.position))
+            if (Fly || controller.RaycastCheckGround(controller.transform.position)) return;
+            if (_hasSafeSpot && controller == _safeOwner)
+            {
                 ReturnToSafeSpot(controller);
+            }
+            else
+            {
+                controller.ToggleNoClip();
+                Plugin.Logger.LogInfo("No ground below and no safe spot in this area yet, staying in fly mode");
+            }
         }
     }
 
@@ -84,9 +91,18 @@ internal static class Sandbox
     // nothing underneath, or (as a net for anything that check misses) once they are in free fall.
     private static void TrackSafeSpot(PlayerCharacterController controller)
     {
-        if (controller != _safeOwner)
+        // Between areas there is no scene and the player drops freely until the game places them.
+        string scene = Teleports.CurrentScene;
+        if (scene == null)
+        {
+            _hasSafeSpot = false;
+            return;
+        }
+        // A spot is only good for the area it was recorded in.
+        if (controller != _safeOwner || scene != _safeScene)
         {
             _safeOwner = controller;
+            _safeScene = scene;
             _hasSafeSpot = false;
         }
         if (controller.State != ControllerState.Normal) return;
@@ -97,9 +113,11 @@ internal static class Sandbox
             _safeRotation = controller.Rotation;
             _hasSafeSpot = true;
         }
-        else if (_hasSafeSpot && controller.Velocity.y < -FallRescueSpeed)
+        else if (controller.Velocity.y < -FallRescueSpeed)
         {
-            ReturnToSafeSpot(controller);
+            // Nowhere known to put them back yet (just arrived in the area): flying stops the fall.
+            if (_hasSafeSpot) ReturnToSafeSpot(controller);
+            else Fly = true;
         }
     }
 
@@ -122,33 +140,5 @@ internal static class Sandbox
         }
         controller.defaultMoveSpeed = _baseMoveSpeed * _speedMultiplier;
         controller.sprintSpeed = _baseSprintSpeed * _speedMultiplier;
-    }
-
-    private static TimeOfDayManager Time =>
-        Singleton<TimeOfDayManager>.InstanceExist() ? Singleton<TimeOfDayManager>.Instance : null;
-
-    public static bool HasClock => Time != null;
-
-    public static string ClockText => $"Day {TimeOfDayManager.GameplayGameDay}, {TimeOfDayManager.ClockHour:00}:{TimeOfDayManager.ClockMinute:00}";
-
-    public static bool ClockFrozen
-    {
-        get
-        {
-            var time = Time;
-            return time != null && time.IsPaused;
-        }
-        set
-        {
-            var time = Time;
-            if (time == null || time.IsPaused == value) return;
-            if (value) time.Dev_Pause();
-            else time.Dev_UnPause();
-        }
-    }
-
-    public static void SkipHours(int hours)
-    {
-        Time?.AddTime(hours * SecondsInHour);
     }
 }
