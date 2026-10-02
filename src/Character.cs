@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Nivalis;
 using Nivalis.Boat;
@@ -6,10 +7,17 @@ using UnityEngine;
 
 namespace NivalisToolBelt;
 
-/// <summary>Tools for the player's own state: money, skill levels and the boat.</summary>
+/// <summary>Tools for the player's own state: money, debt, inspiration points, skill levels and the boat.</summary>
 internal static class Character
 {
     private const float BoatLookupInterval = 1f;
+
+    // Names of the game's variable assets. Debt is counted in whole credits, unlike money.
+    public const string NoodleBarDebt = "NoodleBar_Debt";
+    public const string OtherDebt = "Debt";
+    public const string InspirationPoints = "InspirationPoints";
+
+    private static readonly Dictionary<string, IntegerVariable> Counters = new Dictionary<string, IntegerVariable>();
 
     private static BoatGhost _boat;
     private static float _nextBoatLookup;
@@ -34,6 +42,29 @@ internal static class Character
         if (inventory == null) return;
         if (cents < 0) cents = -Mathf.Min(-cents, inventory.Money);
         if (cents != 0) inventory.ChangeMoneyWithoutReceipt(cents);
+    }
+
+    /// <summary>Looks up one of the game's named whole-number variables (see the constants above). Null if the game has none by that name.</summary>
+    private static IntegerVariable Counter(string name)
+    {
+        if (Counters.TryGetValue(name, out var cached) && cached != null) return cached;
+        Counters.Clear();
+        foreach (var variable in Resources.FindObjectsOfTypeAll<IntegerVariable>())
+            Counters[variable.name] = variable;
+        return Counters.TryGetValue(name, out cached) ? cached : null;
+    }
+
+    public static bool HasCounter(string name) => Counter(name) != null;
+
+    public static int GetCounter(string name) => Counter(name).Value;
+
+    /// <summary>Changes the variable by the given amount, never below zero. The game's own displays follow.</summary>
+    public static void AddToCounter(string name, int amount)
+    {
+        var variable = Counter(name);
+        if (variable == null) return;
+        int value = Mathf.Max(0, variable.Value + amount);
+        if (value != variable.Value) variable.Value = value;
     }
 
     /// <summary>Every skill the game defines. Null while no save is loaded.</summary>

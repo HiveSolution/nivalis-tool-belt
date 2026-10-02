@@ -96,16 +96,30 @@ internal static class SelfTest
             if (!_fontsDumped && c != null)
             {
                 _fontsDumped = true;
-                foreach (var font in Resources.FindObjectsOfTypeAll<Font>())
-                    Write($"font '{font.name}' dynamic={font.dynamic} size={font.fontSize} names={string.Join(",", (string[])font.fontNames)}");
-                foreach (var asset in Resources.FindObjectsOfTypeAll<TMPro.TMP_FontAsset>())
-                    Write($"tmp font '{asset.name}' source={(asset.sourceFontFile == null ? "none" : asset.sourceFontFile.name)}");
+                foreach (var variable in Resources.FindObjectsOfTypeAll<IntegerVariable>())
+                    Write($"intvar '{variable.name}' = {variable.Value}");
+                if (Singleton<Nivalis.GhostSystem.Ai.PersonDataManager>.InstanceExist())
+                {
+                    var people = Singleton<Nivalis.GhostSystem.Ai.PersonDataManager>.Instance.guidToPersons;
+                    foreach (var pair in people)
+                    {
+                        var person = pair.Value;
+                        if (person == null || !person.hasStory) continue;
+                        var data = person.RuntimeData;
+                        Write($"person '{person.DisplayedName}' var='{person.ArticyVariableName}' pure='{person.PureArticyVariableName}' met={data?.HasBeenMet} rel={(data == null ? "none" : data.RelationshipVector.ToString())}");
+                    }
+                    Write($"people total={people.Count} maxLevels={Nivalis.GhostSystem.Ai.RelationshipVector.MaxLevelsCount}");
+                }
+                var database = Singleton<Nivalis.CraftingSystem.ItemDatabase>.Instance._allItems;
+                int storable = 0;
+                for (int i = 0; i < database.Length; i++) if (database[i] != null && database[i].IsPlayerStorable) storable++;
+                Write($"items total={database.Length} storable={storable} listed={Items.Find("").Count}");
             }
             string character = "";
             var skills = Character.Skills;
             if (skills != null && c != null)
             {
-                character = $"cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
+                character = $"typing={menu.IsTyping} bag={Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.ItemCount}/{Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.StackCount} last='{Items.LastResult}' debt={Character.GetCounter(Character.NoodleBarDebt)}/{Character.GetCounter(Character.OtherDebt)} insp={Character.GetCounter(Character.InspirationPoints)} alfie={AlfieVector()} cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
                 for (int i = 0; i < skills.Length; i++)
                 {
                     var xp = Singleton<Nivalis.SkillSystem.SkillLevelController>.Instance.GetPlayerSkillExperience(skills[i]);
@@ -120,6 +134,13 @@ internal static class SelfTest
         {
             Write($"status failed: {e}");
         }
+    }
+
+    private static string AlfieVector()
+    {
+        foreach (var pair in Singleton<Nivalis.GhostSystem.Ai.PersonDataManager>.Instance.guidToPersons)
+            if (pair.Value != null && pair.Value.PureArticyVariableName == "AlfieGunfibel") return Articy.Unity.ArticyDatabase.DefaultGlobalVariables.GetVariableByString<int>("AlfieGunfibel.Friend", false) + " | " + pair.Value.RuntimeData.RelationshipVector.ToString();
+        return "none";
     }
 
     private static void Write(string line) => File.AppendAllText(LogPath, line + "\n");

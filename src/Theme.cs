@@ -29,7 +29,7 @@ internal static class Theme
 
     public const float CheckSize = 18f;
 
-    public static GUIStyle Window, Title, Version, Label, LabelRight, Heading, Hint, Button, ButtonSelected;
+    public static GUIStyle Window, Title, Version, Label, LabelRight, Heading, Hint, Button, ButtonSelected, Field, FieldFocused, FieldEmpty;
 
     private static GUIStyle _empty, _thumb;
     private static GUISkin _skin;
@@ -90,6 +90,16 @@ internal static class Theme
         ButtonSelected.hover.background = litOver;
         ButtonSelected.hover.textColor = Ink;
 
+        Field = TextStyle(15, Text, TextAnchor.MiddleLeft);
+        Field.padding = new RectOffset(8, 8, 0, 0);
+        Field.border = Sides(4);
+        Field.normal.background = CutPlate(12, 12, Ink, Edge, 1, 0, 0);
+        FieldEmpty = new GUIStyle(Field);
+        FieldEmpty.normal.textColor = Muted;
+        FieldFocused = new GUIStyle(Field);
+        FieldFocused.normal.background = CutPlate(12, 12, Ink, Gold, 1, 0, 0);
+        FieldFocused.normal.textColor = Color.white;
+
         _empty = new GUIStyle();
         _thumb = new GUIStyle { fixedWidth = 10f, fixedHeight = 16f };
         _thumb.normal.background = Solid(Text);
@@ -125,7 +135,7 @@ internal static class Theme
     // Until the game has loaded its fonts (or if an update renames them) Unity's default font is used.
     private static void ApplyFonts()
     {
-        foreach (var style in new[] { Label, LabelRight, Hint, Version })
+        foreach (var style in new[] { Label, LabelRight, Hint, Version, Field, FieldFocused, FieldEmpty })
             style.font = _regular;
         foreach (var style in new[] { Title, Heading, Button, ButtonSelected })
         {

@@ -2,7 +2,7 @@
 
 A multi-tool sandbox mod for Nivalis Nights (BepInEx 6, IL2CPP). Press **F1** in-game to open the menu.
 
-The menu has four tabs.
+The menu has six tabs.
 
 **Move**
 
@@ -20,7 +20,27 @@ world, so the mod puts you back on the last spot you stood on.
 | --- | --- |
 | Money | Add 100, 1,000 or 10,000, or remove 100 or 1,000. Added without a receipt, so it does not show up in the end-of-day balance. Never goes below zero. |
 | Skill levels | **-** and **+** for each skill (Trading, Boat, Cleaning, Cooking, Farming, Fishing, Business, Serving, Manager). Each click moves the skill to the start of the previous or next level. |
+| Debt | Lower or raise the noodle bar debt and the other debt in steps of 1,000. Never goes below zero. |
+| Inspiration points | **-** and **+** for the points recipes are unlocked with. |
 | Unlock the boat | Sets the boat to unlocked if it is not yet. This skips whatever the story does to unlock it and cannot be undone from the menu. |
+
+**Items**
+
+| Tool | What it does |
+| --- | --- |
+| Search | Type part of a name to narrow the list of about 1,080 items. While the search box is active the game's own hotkeys are switched off; Enter, Escape or a click elsewhere leaves it. |
+| **+1** / **+10** | Adds the item to your inventory. The line under the list says what was added, or that it did not fit. |
+
+Some furniture exists in several variants with the same name, so those appear more than once.
+
+**People**
+
+| Tool | What it does |
+| --- | --- |
+| Search and list | The 120 story characters, the ones you have met first. Click one to select them. |
+| Friend / Business / Romance / Enemy | **-** and **+** for each of the four relationship levels (0 to 5) with the selected character. |
+
+Relationship levels feed into the story, so changing them can open or close dialogue options.
 
 **Time**
 
@@ -76,7 +96,9 @@ dotnet build -c Release -p:Deploy=true
 - `src/ToolBeltBehaviour.cs`: hotkeys, cursor handling, IMGUI menu.
 - `src/Theme.cs`: the menu's look (generated textures, the game's Barlow Semi Condensed fonts, styles).
 - `src/Sandbox.cs`: movement tools (fly, speed, fall rescue).
-- `src/Character.cs`: money, skill levels, boat.
+- `src/Character.cs`: money, debt, inspiration points, skill levels, boat.
+- `src/Items.cs`: item search and adding items.
+- `src/People.cs`: relationship levels.
 - `src/Clock.cs`: clock tools.
 - `src/Teleports.cs`: saved spots.
 - `src/SelfTest.cs`: scripted in-game test, only compiled with `-p:SelfTest=true`.
