@@ -110,6 +110,31 @@ internal static class Teleports
         Write();
     }
 
+    /// <summary>Gives the spot a new name. Empty names are ignored; tabs would break the file format.</summary>
+    public static void Rename(Spot spot, string name)
+    {
+        name = name.Replace('\t', ' ').Trim();
+        if (name.Length == 0 || name == spot.Name) return;
+        spot.Name = name;
+        Write();
+    }
+
+    private static TravelUnlockManager Areas =>
+        Singleton<TravelUnlockManager>.InstanceExist() ? Singleton<TravelUnlockManager>.Instance : null;
+
+    public static int AreaCount => Areas == null ? 0 : Areas.worldLocations.Length;
+
+    public static int UnlockedAreaCount => Areas == null ? 0 : Areas._unlockedLocations.Count;
+
+    /// <summary>Opens every area for travel, the way the story does one by one.</summary>
+    public static void UnlockAllAreas()
+    {
+        var areas = Areas;
+        if (areas == null) return;
+        areas.UnlockAll();
+        Plugin.Logger.LogInfo($"Areas unlocked: {UnlockedAreaCount} of {AreaCount}");
+    }
+
     /// <summary>Teleports to the spot. Returns true if that needs a trip to another area first.</summary>
     public static bool Go(Spot spot)
     {

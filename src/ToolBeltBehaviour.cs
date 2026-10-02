@@ -28,7 +28,19 @@ public class ToolBeltBehaviour : MonoBehaviour
     private const int MaxFieldLength = 40;
     private const int TabsPerRow = 4;
 
-    private static readonly string[] Tabs = { "Move", "Player", "Items", "People", "Venues", "Time", "Teleport" };
+    private static readonly string[] Tabs = { "Move", "Player", "Items", "People", "Property", "Time", "Teleport" };
+    private static readonly string[] ItemModes = { "Catalogue", "Inventory" };
+    private static readonly string[] PropertyKinds = { "Venues", "Apartments", "Greenhouses" };
+    private const string RenameField = "spot-rename";
+    private const float NoticeWidth = 340f;
+    private const float NoticeSeconds = 2.5f;
+    private const int WeatherPerRow = 2;
+
+    private static readonly Nivalis.GhostSystem.Ai.Happiness[] Moods =
+    {
+        Nivalis.GhostSystem.Ai.Happiness.Sad, Nivalis.GhostSystem.Ai.Happiness.Normal, Nivalis.GhostSystem.Ai.Happiness.Happy,
+    };
+
     private static readonly int[] MoneySteps = { -1000, -100, 100, 1000, 10000 };
     private static readonly string[] MoneyLabels = { "-1k", "-100", "+100", "+1k", "+10k" };
     private static readonly float[] ClockSpeeds = { 0.25f, 0.5f, 1f, 2f, 5f, 10f };
@@ -39,6 +51,8 @@ public class ToolBeltBehaviour : MonoBehaviour
     private bool _ownsCursor;
     private bool _guiFailed;
     private float _y;
+    private string _notice = "";
+    private float _noticeUntil;
     private int _tab;
     private int _skipToHour = 6;
     private Vector2 _spotScroll;
@@ -49,6 +63,15 @@ public class ToolBeltBehaviour : MonoBehaviour
     private PersonEntry _person;
     private Vector2 _venueScroll;
     private VenueEntry _venue;
+    private int _propertyKind;
+    private EstateEntry _apartment;
+    private Vector2 _apartmentScroll;
+    private EstateEntry _greenhouse;
+    private Vector2 _greenhouseScroll;
+    private int _itemMode;
+    private bool _renameMode;
+    private Spot _renaming;
+    private string _renameText = "";
     private string _focusedField;
     private bool _typing;
     private Il2CppSystem.Collections.Generic.List<InputAction> _mutedActions;
@@ -58,6 +81,8 @@ public class ToolBeltBehaviour : MonoBehaviour
     internal bool IsOpen => _open;
 
     internal bool IsTyping => _typing;
+
+    internal Rect WindowRect => _window;
 
     private void Awake()
     {
@@ -70,7 +95,28 @@ public class ToolBeltBehaviour : MonoBehaviour
         {
             SetTyping(_open && _focusedField != null);
             if (IsPressed(Settings.MenuKey.Value)) SetOpen(!_open);
-            if (IsPressed(Settings.FlyKey.Value)) Sandbox.Fly = !Sandbox.Fly;
+            if (IsPressed(Settings.FlyKey.Value))
+            {
+                Sandbox.Fly = !Sandbox.Fly;
+                Notify("Fly / ghost mode", Sandbox.Fly);
+            }
+            if (IsPressed(Settings.UndetectedKey.Value))
+            {
+                Toggles.Undetected = !Toggles.Undetected;
+                Notify("Undetected during curfew", Toggles.Undetected);
+            }
+            if (IsPressed(Settings.BoatFuelKey.Value))
+            {
+                Toggles.BoatFuel = !Toggles.BoatFuel;
+                Notify("Unlimited boat fuel", Toggles.BoatFuel);
+            }
+            if (IsPressed(Settings.GrowthKey.Value))
+            {
+                Toggles.InstantGrowth = !Toggles.InstantGrowth;
+                Notify("Instant greenhouse growth", Toggles.InstantGrowth);
+            }
+            Toggles.Tick();
+            Venues.Tick();
             Sandbox.Tick();
             Clock.Tick();
             Teleports.Tick();
@@ -140,13 +186,22 @@ public class ToolBeltBehaviour : MonoBehaviour
         _ownsCursor = true;
     }
 
+    /// <summary>Shows a short notice on screen: a hotkey gives no other sign of what it did while the menu is closed.</summary>
+    private void Notify(string what, bool on)
+    {
+        _notice = $"{what}: {(on ? "on" : "off")}";
+        _noticeUntil = Time.realtimeSinceStartup + NoticeSeconds;
+    }
+
     private void OnGUI()
     {
-        if (!_open || _guiFailed) return;
+        bool notice = Time.realtimeSinceStartup < _noticeUntil;
+        if ((!_open && !notice) || _guiFailed) return;
         try
         {
             Theme.Ensure();
-            _window = GUI.Window(WindowId, _window, _drawWindow, "", Theme.Window);
+            if (notice) GUI.Label(new Rect((Screen.width - NoticeWidth) / 2f, 190f, NoticeWidth, 34f), _notice, Theme.Notice);
+            if (_open) _window = GUI.Window(WindowId, _window, _drawWindow, "", Theme.Window);
         }
         catch (Exception e)
         {
@@ -208,7 +263,7 @@ public class ToolBeltBehaviour : MonoBehaviour
                 case "Player": DrawPlayer(); break;
                 case "Items": DrawItems(); break;
                 case "People": DrawPeople(); break;
-                case "Venues": DrawVenues(); break;
+                case "Property": DrawProperty(); break;
                 case "Time": DrawTime(); break;
                 default: DrawTeleport(); break;
             }
@@ -225,12 +280,17 @@ public class ToolBeltBehaviour : MonoBehaviour
 
     private void DrawItems()
     {
+        var modes = Columns(ItemModes.Length);
+        for (int i = 0; i < ItemModes.Length; i++)
+            if (Button(modes[i], ItemModes[i], _itemMode == i)) _itemMode = i;
+
         _itemQuery = TextField(Row(), _itemQuery, "item-search", "Search items...");
-        var items = Items.Find(_itemQuery);
-        Heading("Add to inventory", items.Count == 1 ? "1 item" : $"{items.Count} items");
+        bool catalogue = _itemMode == 0;
+        var items = catalogue ? Items.Find(_itemQuery) : Items.FindOwned(_itemQuery);
+        Heading(catalogue ? "Add to inventory" : "In your inventory", items.Count == 1 ? "1 item" : $"{items.Count} items");
 
         const float line = RowHeight + RowGap;
-        const float addWidth = 40f;
+        const float actionWidth = 40f;
         int visible = Mathf.Min(items.Count, MaxVisibleItems);
         bool scrolls = items.Count > MaxVisibleItems;
         float listWidth = Width - 2f * Pad;
@@ -238,7 +298,7 @@ public class ToolBeltBehaviour : MonoBehaviour
         var area = new Rect(Pad, _y, listWidth, visible * line);
         _y += area.height;
 
-        ItemEntry add = null;
+        ItemEntry picked = null;
         int amount = 0;
         if (scrolls) _itemScroll = GUI.BeginScrollView(area, _itemScroll, new Rect(0f, 0f, innerWidth, items.Count * line));
         // The catalogue has hundreds of entries; only the rows in view are drawn.
@@ -248,14 +308,22 @@ public class ToolBeltBehaviour : MonoBehaviour
         {
             float x = scrolls ? 0f : area.x;
             float y = (scrolls ? 0f : area.y) + i * line;
-            GUI.Label(new Rect(x, y, innerWidth - 2f * (addWidth + RowGap) - 4f, RowHeight), items[i].Name, Theme.Label);
-            if (Button(new Rect(x + innerWidth - 2f * addWidth - RowGap, y, addWidth, RowHeight), "+1")) { add = items[i]; amount = 1; }
-            if (Button(new Rect(x + innerWidth - addWidth, y, addWidth, RowHeight), "+10")) { add = items[i]; amount = 10; }
+            var text = new Rect(x, y, innerWidth - 2f * (actionWidth + RowGap) - 4f, RowHeight);
+            GUI.Label(text, items[i].Name, Theme.Label);
+            if (!catalogue) GUI.Label(text, items[i].Count.ToString(), Theme.LabelRight);
+            // In the inventory view an amount of zero stands for "all of them".
+            if (Button(new Rect(x + innerWidth - 2f * actionWidth - RowGap, y, actionWidth, RowHeight), catalogue ? "+1" : "-1")) { picked = items[i]; amount = 1; }
+            if (Button(new Rect(x + innerWidth - actionWidth, y, actionWidth, RowHeight), catalogue ? "+10" : "All")) { picked = items[i]; amount = catalogue ? 10 : 0; }
         }
         if (scrolls) GUI.EndScrollView();
 
-        if (add != null) Items.Add(add, amount);
-        GUI.Label(Row(20f), Items.LastResult ?? "Type to search, then add 1 or 10.", Theme.Hint);
+        if (picked != null)
+        {
+            if (catalogue) Items.Add(picked, amount);
+            else Items.Remove(picked, amount);
+        }
+        string hint = catalogue ? "Type to search, then add 1 or 10." : "Removed items are gone for good.";
+        GUI.Label(Row(20f), Items.LastResult ?? hint, Theme.Hint);
     }
 
     /// <summary>
@@ -297,6 +365,16 @@ public class ToolBeltBehaviour : MonoBehaviour
         GUI.Label(row, $"[{Settings.FlyKey.Value}]", Theme.Version);
         if (fly != Sandbox.Fly) Sandbox.Fly = fly;
         if (fly) GUI.Label(Row(20f), "E up, Q down, passes through walls", Theme.Hint);
+
+        row = Row();
+        bool undetected = Theme.Toggle(row, Toggles.Undetected, "Undetected during curfew");
+        GUI.Label(row, $"[{Settings.UndetectedKey.Value}]", Theme.Version);
+        if (undetected != Toggles.Undetected) Toggles.Undetected = undetected;
+
+        row = Row();
+        bool fuel = Theme.Toggle(row, Toggles.BoatFuel, "Unlimited boat fuel");
+        GUI.Label(row, $"[{Settings.BoatFuelKey.Value}]", Theme.Version);
+        if (fuel != Toggles.BoatFuel) Toggles.BoatFuel = fuel;
 
         _y += SectionGap;
         Heading("Movement speed", "x" + Number(Sandbox.SpeedMultiplier, "0.0"));
@@ -398,6 +476,99 @@ public class ToolBeltBehaviour : MonoBehaviour
         }
     }
 
+    private void DrawProperty()
+    {
+        var kinds = Columns(PropertyKinds.Length);
+        for (int i = 0; i < PropertyKinds.Length; i++)
+            if (Button(kinds[i], PropertyKinds[i], _propertyKind == i)) _propertyKind = i;
+
+        if (_propertyKind == 0)
+        {
+            DrawVenues();
+            DrawAllVenues();
+        }
+        else if (_propertyKind == 1)
+        {
+            DrawEstates(Estates.Apartments(), "Apartments", ref _apartment, ref _apartmentScroll);
+        }
+        else
+        {
+            var row = Row();
+            bool growth = Theme.Toggle(row, Toggles.InstantGrowth, "Instant growth in your greenhouses");
+            GUI.Label(row, $"[{Settings.GrowthKey.Value}]", Theme.Version);
+            if (growth != Toggles.InstantGrowth) Toggles.InstantGrowth = growth;
+            DrawEstates(Estates.Greenhouses(), "Greenhouses", ref _greenhouse, ref _greenhouseScroll);
+        }
+    }
+
+    // Settings that apply to every venue the player holds.
+    private void DrawAllVenues()
+    {
+        _y += SectionGap;
+        Heading("All your venues");
+        int change = Stepper("Storage space", $"x{Venues.StorageMultiplier}", "-", "+");
+        if (change != 0) Venues.StorageMultiplier += change;
+
+        var held = Venues.HeldHappiness;
+        int staff = Venues.StaffCount;
+        Heading("Staff happiness", held == null ? "Up to the game" : $"Held for {staff} staff");
+        var moods = Columns(Moods.Length);
+        for (int i = 0; i < Moods.Length; i++)
+            if (Button(moods[i], Moods[i].ToString(), held == Moods[i])) Venues.HoldStaffHappiness(Moods[i]);
+        if (held != null && Button(Row(), "Leave it to the game again")) Venues.HoldStaffHappiness(null);
+    }
+
+    private void DrawEstates(System.Collections.Generic.List<EstateEntry> estates, string title, ref EstateEntry selected, ref Vector2 scroll)
+    {
+        Heading(title, estates.Count.ToString());
+        if (estates.Count == 0)
+        {
+            GUI.Label(Row(), "None found.", Theme.Label);
+            return;
+        }
+
+        const float line = RowHeight + RowGap;
+        int visible = Mathf.Min(estates.Count, MaxVisibleVenues);
+        bool scrolls = estates.Count > MaxVisibleVenues;
+        float listWidth = Width - 2f * Pad;
+        float innerWidth = scrolls ? listWidth - 14f : listWidth;
+        var area = new Rect(Pad, _y, listWidth, visible * line);
+        _y += area.height;
+
+        if (scrolls) scroll = GUI.BeginScrollView(area, scroll, new Rect(0f, 0f, innerWidth, estates.Count * line));
+        for (int i = 0; i < estates.Count; i++)
+        {
+            float x = scrolls ? 0f : area.x;
+            float y = (scrolls ? 0f : area.y) + i * line;
+            string label = Estates.IsMine(estates[i]) ? estates[i].Name + "  (yours)" : estates[i].Name;
+            if (Button(new Rect(x, y, innerWidth, RowHeight), label, estates[i] == selected)) selected = estates[i];
+        }
+        if (scrolls) GUI.EndScrollView();
+
+        if (selected == null || !estates.Contains(selected))
+        {
+            selected = null;
+            GUI.Label(Row(20f), "Pick one. Yours are listed first.", Theme.Hint);
+            return;
+        }
+
+        _y += SectionGap;
+        if (Estates.IsMine(selected))
+        {
+            bool rented = Estates.State(selected) == Nivalis.GhostSystem.CustomerLoop.OwnershipType.Rent;
+            Heading(selected.Name, rented ? "Rented" : "Owned");
+            if (rented) GUI.Label(Row(20f), $"The game charges {Number(Estates.DailyRent(selected) / 100f, "#,0.00")} rent a day.", Theme.Hint);
+            if (Estates.IsOnlyHome(selected)) GUI.Label(Row(20f), "Your only home cannot be given up here.", Theme.Hint);
+            else if (Button(Row(), "Give up")) Estates.GiveUp(selected);
+        }
+        else
+        {
+            Heading(selected.Name, "Not yours");
+            if (Button(Row(), $"Rent ({Number(Estates.DailyRent(selected) / 100f, "#,0.00")} a day)")) Estates.Rent(selected);
+            if (Button(Row(), "Take over for free")) Estates.Buy(selected);
+        }
+    }
+
     private void DrawVenues()
     {
         var venues = Venues.List();
@@ -486,12 +657,26 @@ public class ToolBeltBehaviour : MonoBehaviour
         if (Clock.InCurfew)
         {
             GUI.Label(Row(), "Curfew: sleep to start the next day.", Theme.Label);
-            return;
         }
-        if (Button(Row(), "Skip 1 hour")) Clock.SkipHours(1);
-        _skipToHour = Mathf.RoundToInt(Theme.Slider(Row(SliderHeight), _skipToHour, 0f, 23f));
-        string target = Clock.CurfewComesBefore(_skipToHour) ? $"curfew ({Clock.CurfewHour:00}:00)" : $"{_skipToHour:00}:00";
-        if (Button(Row(), $"Skip to {target}")) Clock.SkipTo(_skipToHour);
+        else
+        {
+            if (Button(Row(), "Skip 1 hour")) Clock.SkipHours(1);
+            _skipToHour = Mathf.RoundToInt(Theme.Slider(Row(SliderHeight), _skipToHour, 0f, 23f));
+            string target = Clock.CurfewComesBefore(_skipToHour) ? $"curfew ({Clock.CurfewHour:00}:00)" : $"{_skipToHour:00}:00";
+            if (Button(Row(), $"Skip to {target}")) Clock.SkipTo(_skipToHour);
+        }
+
+        var presets = Weather.Presets();
+        if (presets.Count == 0) return;
+        _y += SectionGap;
+        Heading("Weather", Weather.Held ? "Held" : "Follows the forecast");
+        for (int first = 0; first < presets.Count; first += WeatherPerRow)
+        {
+            var cells = Columns(WeatherPerRow);
+            for (int i = first; i < presets.Count && i < first + WeatherPerRow; i++)
+                if (Button(cells[i - first], presets[i].Name)) Weather.Set(presets[i]);
+        }
+        if (Weather.Held && Button(Row(), "Follow the forecast again")) Weather.FollowForecast();
     }
 
     private void DrawTeleport()
@@ -503,8 +688,21 @@ public class ToolBeltBehaviour : MonoBehaviour
         }
 
         Heading("Saved spots", $"You are in {Teleports.AreaName}");
-        if (Button(Row(), "Save current position")) Teleports.SaveCurrent();
+        var top = Row();
+        const float renameWidth = 84f;
+        if (Button(new Rect(top.x, top.y, top.width - renameWidth - RowGap, top.height), "Save current position")) Teleports.SaveCurrent();
+        if (Button(new Rect(top.xMax - renameWidth, top.y, renameWidth, top.height), "Rename", _renameMode)) _renameMode = !_renameMode;
 
+        DrawSpots();
+
+        _y += SectionGap;
+        int unlocked = Teleports.UnlockedAreaCount, total = Teleports.AreaCount;
+        Heading("Areas", $"{unlocked} of {total} unlocked");
+        if (unlocked < total && Button(Row(), "Unlock all areas")) Teleports.UnlockAllAreas();
+    }
+
+    private void DrawSpots()
+    {
         var spots = Teleports.Listed;
         if (spots.Count == 0)
         {
@@ -526,15 +724,43 @@ public class ToolBeltBehaviour : MonoBehaviour
         {
             float x = scrolls ? 0f : area.x;
             float y = (scrolls ? 0f : area.y) + i * line;
-            // Spots in other areas need a trip there first; the game shows its usual travel transition.
-            string label = Teleports.IsHere(spots[i]) ? spots[i].Name : spots[i].Name + "  (travel)";
-            if (Button(new Rect(x, y, innerWidth - removeWidth - RowGap, RowHeight), label)) go = spots[i];
+            var name = new Rect(x, y, innerWidth - removeWidth - RowGap, RowHeight);
+            if (spots[i] == _renaming)
+            {
+                _renameText = TextField(name, _renameText, RenameField, "Name");
+                // Enter, Escape or a click elsewhere takes the keyboard away: that ends the edit.
+                if (_focusedField != RenameField)
+                {
+                    Teleports.Rename(_renaming, _renameText);
+                    _renaming = null;
+                }
+            }
+            else
+            {
+                // Spots in other areas need a trip there first; the game shows its usual travel transition.
+                string label = Teleports.IsHere(spots[i]) ? spots[i].Name : spots[i].Name + "  (travel)";
+                if (Button(name, label))
+                {
+                    if (_renameMode)
+                    {
+                        _renaming = spots[i];
+                        _renameText = spots[i].Name;
+                        _focusedField = RenameField;
+                    }
+                    else go = spots[i];
+                }
+            }
             if (Button(new Rect(x + innerWidth - removeWidth, y, removeWidth, RowHeight), "X")) remove = spots[i];
         }
         if (scrolls) GUI.EndScrollView();
+        if (_renameMode) GUI.Label(Row(20f), "Click a spot to rename it, Enter to finish.", Theme.Hint);
 
         // Applied after the loop, both change what the list shows.
-        if (remove != null) Teleports.Remove(remove);
+        if (remove != null)
+        {
+            if (remove == _renaming) _renaming = null;
+            Teleports.Remove(remove);
+        }
         // Get out of the way of the travel transition.
         if (go != null && Teleports.Go(go)) SetOpen(false);
     }

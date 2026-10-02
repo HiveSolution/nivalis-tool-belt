@@ -2,6 +2,16 @@
 
 A multi-tool sandbox mod for Nivalis Nights (BepInEx 6, IL2CPP). Press **F1** in-game to open the menu.
 
+![The tool belt menu open while flying over the Docks](docs/screenshots/in-game.jpg)
+
+| Move | Player | Items | People |
+| --- | --- | --- | --- |
+| ![Move tab](docs/screenshots/move.png) | ![Player tab](docs/screenshots/player.png) | ![Items tab](docs/screenshots/items.png) | ![People tab](docs/screenshots/people.png) |
+
+| Property | Time | Teleport |
+| --- | --- | --- |
+| ![Property tab](docs/screenshots/property.png) | ![Time tab](docs/screenshots/time.png) | ![Teleport tab](docs/screenshots/teleport.png) |
+
 The menu has seven tabs.
 
 **Move**
@@ -9,10 +19,15 @@ The menu has seven tabs.
 | Tool | What it does |
 | --- | --- |
 | Fly / ghost mode (**F2**) | The game's own no-clip mode: fly along the view direction, **E** up, **Q** down, pass through walls. |
+| Undetected during curfew (**F3**) | The curfew's cameras and drones do not notice you. Switching it off during a curfew arms them again at once. |
+| Unlimited boat fuel (**F4**) | Keeps the boat's tank full. |
 | Movement speed | Multiplier for walk, sprint and fly speed (x0.5 to x5). |
 
 Leaving fly mode with no ground underneath (over water, inside a building) would drop you out of the
 world, so the mod puts you back on the last spot you stood on.
+
+The switches (these, instant growth, held weather and held staff happiness) are all off again after
+a restart. A hotkey pressed with the menu closed shows a short notice of what it switched.
 
 **Player**
 
@@ -29,9 +44,11 @@ world, so the mod puts you back on the last spot you stood on.
 | Tool | What it does |
 | --- | --- |
 | Search | Type part of a name to narrow the list of about 1,080 items. While the search box is active the game's own hotkeys are switched off; Enter, Escape or a click elsewhere leaves it. |
-| **+1** / **+10** | Adds the item to your inventory. The line under the list says what was added, or that it did not fit. |
+| Catalogue: **+1** / **+10** | Adds the item to your inventory. The line under the list says what was added, or that it did not fit. |
+| Inventory: **-1** / **All** | Lists what you carry with its count and removes one or all of an item. Removed items are gone for good. |
 
-Some furniture exists in several variants with the same name, so those appear more than once.
+About a third of the catalogue (mostly furniture) shares its name with other variants. Those carry
+the furniture style in brackets where that tells them apart, otherwise a number ("Abstract Painting #2").
 
 **People**
 
@@ -42,18 +59,24 @@ Some furniture exists in several variants with the same name, so those appear mo
 
 Relationship levels feed into the story, so changing them can open or close dialogue options.
 
-**Venues**
+**Property**
+
+Three lists: venues, apartments and greenhouses, each with yours first.
 
 | Tool | What it does |
 | --- | --- |
-| List | Your venues first, then the venues the game lets the player acquire. Venues run by other owners are not listed. |
-| Level | **-** and **+** for the level (1 to 5) of a venue you hold. |
-| Take over for free | Makes an acquirable venue yours, as a purchase, without paying. |
-| Give up this venue | Hands a venue back. Not offered for your starting venue. |
+| Venues | Your venues and the ones the game lets the player acquire. Venues run by other owners are not listed. |
+| Venue level | **-** and **+** for the level (1 to 5) of a venue you hold. |
+| Apartments, greenhouses | The apartments meant for the player and all greenhouses. |
+| Rent | Starts renting an apartment or greenhouse. The game charges the daily rent as usual. |
+| Take over for free | Makes it yours as a purchase. Your money balance is left as it was. |
+| Give up | Hands it back, again without touching your balance. Not offered for your starting venue or your only apartment. |
+| Storage space (venues) | Multiplies the storage of every venue you hold, x1 to x10. This one is remembered between sessions; items stored beyond the normal space stay, but nothing more fits until the multiplier is back. |
+| Staff happiness (venues) | Holds all staff of your venues at Sad, Normal or Happy. "Leave it to the game again" gives everyone back the mood they had. |
+| Instant growth (**F6**, greenhouses) | Everything planted in your greenhouses is ready to harvest at once. |
 
 These go through the game's own ownership handling, but they skip its purchase flow, so anything
-the story ties to buying a venue does not happen. Try it on a spare save first. Apartments and
-greenhouses are not covered.
+the story ties to buying a place does not happen. Try it on a spare save first.
 
 **Time**
 
@@ -62,6 +85,7 @@ greenhouses are not covered.
 | Freeze clock | Stops the in-game clock. |
 | Clock speed | How fast the in-game clock runs, x0.25 to x10. Only the clock changes, not the game speed. Resets to x1 when the game restarts. |
 | Skip 1 hour / Skip ahead to HH:00 | Advances the clock. It never goes back, and a skip stops at the curfew (02:00), where the game ends the day as usual. During the curfew you have to sleep to move on. |
+| Weather | Switches to one of the game's ten weather types (sunny, rain, storm, fog, snow, blizzard and so on) and holds it. "Follow the forecast again" hands the weather back to the game. |
 
 **Teleport**
 
@@ -69,6 +93,8 @@ greenhouses are not covered.
 | --- | --- |
 | Save current position | Adds a spot for the area you are in. |
 | Spot buttons | Teleport to that spot; **X** deletes it. A spot saved in mid-air switches fly mode on when you arrive. |
+| Rename | While switched on, clicking a spot edits its name instead of teleporting; Enter finishes. |
+| Unlock all areas | Opens every area for travel, as the story otherwise does one by one. Cannot be undone from the menu. |
 
 The list shows every saved spot, the current area's first. A spot in another area is marked
 **(travel)**: clicking it uses the game's own area travel to get there (the usual loading transition,
@@ -77,7 +103,7 @@ game itself does not let you leave an area; it stays blocked while you are not i
 dialogues, the end-of-day screens).
 
 Spots are stored in `<game>\BepInEx\config\renokk.nivalis.toolbelt.spots.txt` (one tab-separated line
-per spot); edit the second column there to rename a spot while the game is closed.
+per spot).
 
 The mod writes nothing to save files itself, but the game saves whatever state you are in:
 skipped time or an odd position ends up in the next save like any other progress.
@@ -87,7 +113,8 @@ skipped time or an odd position ends up in the next save like any other progress
 1. Install [BepInEx 6 (IL2CPP, x64)](https://builds.bepinex.dev/projects/bepinex_be) into the game folder and start the game once.
 2. Download the zip from the [latest release](https://github.com/HiveSolution/nivalis-tool-belt/releases/latest) and extract it into the game folder, so that `NivalisToolBelt.dll` ends up in `<game>\BepInEx\plugins\NivalisToolBelt\`.
 
-Hotkeys and the slider range are in `<game>\BepInEx\config\renokk.nivalis.toolbelt.cfg` (created on first start).
+The hotkeys (F1 menu, F2 fly, F3 undetected, F4 boat fuel, F6 instant growth) and the slider range can
+be changed in `<game>\BepInEx\config\renokk.nivalis.toolbelt.cfg` (created on first start).
 
 ## Build
 
@@ -110,11 +137,14 @@ dotnet build -c Release -p:Deploy=true
 - `src/Theme.cs`: the menu's look (generated textures, the game's Barlow Semi Condensed fonts, styles).
 - `src/Sandbox.cs`: movement tools (fly, speed, fall rescue).
 - `src/Character.cs`: money, debt, inspiration points, skill levels, boat.
-- `src/Items.cs`: item search and adding items.
+- `src/Items.cs`: item search, adding and removing items.
 - `src/People.cs`: relationship levels.
-- `src/Venues.cs`: venue level and ownership.
+- `src/Venues.cs`: venue level, ownership, storage multiplier, staff happiness.
+- `src/Toggles.cs`: undetected during curfew, boat fuel, instant growth.
+- `src/Estates.cs`: apartments and greenhouses.
+- `src/Weather.cs`: weather presets.
 - `src/Clock.cs`: clock tools.
-- `src/Teleports.cs`: saved spots.
+- `src/Teleports.cs`: saved spots, area travel and area unlocking.
 - `src/SelfTest.cs`: scripted in-game test, only compiled with `-p:SelfTest=true`.
 
 ## Testing in the real game

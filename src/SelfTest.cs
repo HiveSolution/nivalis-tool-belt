@@ -64,10 +64,18 @@ internal static class SelfTest
         }
         if (input.GetKeyDown(KeyCode.F10))
         {
-            Sandbox.SpeedMultiplier = Sandbox.SpeedMultiplier == 1f ? 3f : 1f;
-            Write($"speed multiplier -> {Sandbox.SpeedMultiplier}");
+            // Knock a few values off their targets so the switches have something to restore.
+            var boat = Nivalis.Boat.BoatGhost.FindBoat();
+            if (boat != null) boat.Fuel = 10f;
+            foreach (var entry in Estates.Greenhouses())
+            {
+                if (!Estates.IsMine(entry)) continue;
+                var modules = Singleton<GreenhouseManager>.Instance.GetArea(entry.Greenhouse).modules;
+                for (int i = 0; i < modules.Count; i++)
+                    if (modules[i].Value.Planted) modules[i].Value.Growth = 0.3f;
+            }
+            Write("perturbed boat fuel and greenhouse growth");
         }
-
         if (input.GetKeyDown(KeyCode.F11))
         {
             Write($"saving {TestSlot}: {Singleton<SerializationManager>.Instance.Save(TestSlot, false)}");
@@ -114,6 +122,55 @@ internal static class SelfTest
                 int storable = 0;
                 for (int i = 0; i < database.Length; i++) if (database[i] != null && database[i].IsPlayerStorable) storable++;
                 Write($"items total={database.Length} storable={storable} listed={Items.Find("").Count}");
+                foreach (var entry in Estates.Apartments())
+                    Write($"apartment '{entry.Name}' mine={Estates.IsMine(entry)} state={Estates.State(entry)} rent={Estates.DailyRent(entry)} onlyHome={Estates.IsOnlyHome(entry)}");
+                foreach (var entry in Estates.Greenhouses())
+                    Write($"greenhouse '{entry.Name}' mine={Estates.IsMine(entry)} state={Estates.State(entry)} rent={Estates.DailyRent(entry)}");
+                foreach (var preset in Weather.Presets())
+                    Write($"weather preset '{preset.Name}' asset='{preset.Type.name}' rain={preset.Type.IsRain} snow={preset.Type.isSnow}");
+                int variants = 0;
+                foreach (var entry in Items.Find(""))
+                    if ((entry.Name.EndsWith(")") || entry.Name.Contains(" #")) && variants++ < 6) Write($"variant '{entry.Name}'");
+                Write($"variants total={variants} areas={Teleports.UnlockedAreaCount}/{Teleports.AreaCount}");
+                try
+                {
+                    var curfew = Singleton<CurfewManager>.Instance;
+                    Write($"curfew enabled={curfew._isCurfewEnabled} security={curfew._isCurfewSecurityEnabled} awareness={curfew.Awarness} impune={curfew._isImpuneUsed} caught={curfew.IsPlayerCaught}");
+                    var boat = Nivalis.Boat.BoatGhost.FindBoat();
+                    var boatController = Nivalis.Boat.BoatController.Instance;
+                    Write($"boat fuel={(boat == null ? -1f : boat.Fuel)} controller={(boatController == null ? "none" : $"capacity={boatController.FuelCapacity} normalized={boatController.FuelNormalized}")}");
+                    Write($"greenhouse debugSpeedUp={Singleton<GreenhouseManager>.Instance.debugSpeedUp}");
+                    foreach (var entry in Estates.Greenhouses())
+                    {
+                        if (!Estates.IsMine(entry)) continue;
+                        var plot = Singleton<GreenhouseManager>.Instance.GetArea(entry.Greenhouse);
+                        var modules = plot.modules;
+                        Write($"greenhouse '{entry.Name}' modules={modules.Count} growing={plot.IsGrowing}");
+                        for (int i = 0; i < modules.Count; i++)
+                        {
+                            var module = modules[i].Value;
+                            Write($"  module {i}: planted={module.Planted} ready={module.ReadyForHarvest} plant={(module.plantType == null ? "none" : module.plantType.Name)} growth={module.growth} cost={module.growthCost} speed={(module.Planted ? plot.CalculateGrowthSpeed(module) : 0f)}");
+                        }
+                    }
+                    foreach (var entry in Venues.List())
+                    {
+                        if (!Venues.IsMine(entry)) continue;
+                        var data = entry.Venue.RuntimeData;
+                        var joint = data.JointInventory;
+                        Write($"venue '{entry.Name}' base fridge={entry.Venue.BaseFridgeSpace} cupboard={entry.Venue.BaseCupboardSpace} normalCap={(joint.NormalCapacity.HasValue ? joint.NormalCapacity.Value : -1)} fridgeCap={(joint.RefridgeratedCapacity.HasValue ? joint.RefridgeratedCapacity.Value : -1)} normalCount={joint.NormalCount} fridgeCount={joint.RefridgeratedCount} furniture={data.PlacedFurniture.Count}");
+                        var staff = data.staff;
+                        for (int i = 0; i < staff.Count; i++)
+                        {
+                            var runtime = staff[i].RuntimeData;
+                            var mood = runtime.WorkSatisfaction;
+                            Write($"  staff '{staff[i].DisplayedName}' happiness={mood.Happiness} value={mood.Value} wage={mood.WageInfluence} skill={mood.SkillInfluence} quit={runtime.WorkQuit} paid={runtime.LastPaidWage} wageNow={runtime.Wage}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Write($"exploration failed: {e}");
+                }
                 if (Singleton<PropertyManager>.InstanceExist())
                 {
                     var manager = Singleton<PropertyManager>.Instance;
@@ -141,7 +198,7 @@ internal static class SelfTest
             var skills = Character.Skills;
             if (skills != null && c != null)
             {
-                character = $"typing={menu.IsTyping} bag={Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.ItemCount}/{Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.StackCount} last='{Items.LastResult}' debt={Character.GetCounter(Character.NoodleBarDebt)}/{Character.GetCounter(Character.OtherDebt)} insp={Character.GetCounter(Character.InspirationPoints)} alfie={AlfieVector()} venues={VenueSummary()} cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
+                character = $"typing={menu.IsTyping} bag={Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.ItemCount}/{Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Items.StackCount} last='{Items.LastResult}' debt={Character.GetCounter(Character.NoodleBarDebt)}/{Character.GetCounter(Character.OtherDebt)} insp={Character.GetCounter(Character.InspirationPoints)} alfie={AlfieVector()} extra={ExtraSummary()} estates={EstateSummary()} weather={WeatherSummary()} areas={Teleports.UnlockedAreaCount}/{Teleports.AreaCount} venues={VenueSummary()} cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
                 for (int i = 0; i < skills.Length; i++)
                 {
                     var xp = Singleton<Nivalis.SkillSystem.SkillLevelController>.Instance.GetPlayerSkillExperience(skills[i]);
@@ -150,12 +207,55 @@ internal static class SelfTest
                     character += "]";
                 }
             }
-            Write($"t={now:0} menu={menu.IsOpen} cursor={CursorModeManager.IsCursorActive} {player} {clock} {area} {character}");
+            Write($"t={now:0} win={(int)menu.WindowRect.x},{(int)menu.WindowRect.y},{(int)menu.WindowRect.width},{(int)menu.WindowRect.height} menu={menu.IsOpen} cursor={CursorModeManager.IsCursorActive} {player} {clock} {area} {character}");
         }
         catch (Exception e)
         {
             Write($"status failed: {e}");
         }
+    }
+
+    private static string ExtraSummary()
+    {
+        var curfew = Singleton<CurfewManager>.Instance;
+        var boat = Nivalis.Boat.BoatGhost.FindBoat();
+        string text = $"undetected={Toggles.Undetected} security={curfew._isCurfewSecurityEnabled} awareness={curfew.Awarness:0.00} caught={curfew.IsPlayerCaught} fuelOn={Toggles.BoatFuel} fuel={(boat == null ? -1f : boat.Fuel):0.0} growOn={Toggles.InstantGrowth} growth=";
+        foreach (var entry in Estates.Greenhouses())
+        {
+            if (!Estates.IsMine(entry)) continue;
+            var modules = Singleton<GreenhouseManager>.Instance.GetArea(entry.Greenhouse).modules;
+            for (int i = 0; i < modules.Count; i++) text += $"{modules[i].Value.growth:0.00}/";
+        }
+        text += $" storage=x{Venues.StorageMultiplier}";
+        foreach (var entry in Venues.List())
+        {
+            if (!Venues.IsMine(entry)) continue;
+            var data = entry.Venue.RuntimeData;
+            var joint = data.JointInventory;
+            text += $"[{entry.Name} cap={joint.NormalCapacity.Value}/{joint.RefridgeratedCapacity.Value} max={joint.NormalInventory.Restriction.MaxItems.Value}/{joint.RefridgeratedInventory.Restriction.MaxItems.Value} count={joint.NormalCount}/{joint.RefridgeratedCount} mood=";
+            var staff = data.staff;
+            for (int i = 0; i < staff.Count; i++) text += $"{staff[i].RuntimeData.WorkSatisfaction.Happiness}:{staff[i].RuntimeData.WorkSatisfaction.Value:0.00},";
+            text += "]";
+        }
+        return text;
+    }
+
+    private static string EstateSummary()
+    {
+        string text = "";
+        foreach (var entry in Estates.Apartments())
+            if (Estates.IsMine(entry)) text += $"[{entry.Name}:{Estates.State(entry)}]";
+        foreach (var entry in Estates.Greenhouses())
+            if (Estates.IsMine(entry)) text += $"[{entry.Name}:{Estates.State(entry)}]";
+        return text;
+    }
+
+    private static string WeatherSummary()
+    {
+        if (!Singleton<WeatherForecastController>.InstanceExist()) return "none";
+        var controller = Singleton<WeatherForecastController>.Instance;
+        var manager = Nivalis.Weather.WeatherManager.Instance;
+        return $"held={controller.stopTimedWeatherProgression} rain={(manager == null ? -1f : manager.globalRainAmount):0.00} fog={(manager == null ? -1f : manager.globalFogAmount):0.00} snow={(manager == null ? -1f : manager.globalSnow):0.00}";
     }
 
     private static string VenueSummary()

@@ -16,7 +16,8 @@ internal static class Theme
     private static readonly Color Text = Rgb(216, 210, 200);
     private static readonly Color Muted = Rgb(150, 144, 136);
     private static readonly Color Ink = Rgb(27, 25, 24);
-    private static readonly Color Plate = new Color(27 / 255f, 25 / 255f, 24 / 255f, 0.96f);
+    // Fully opaque: the game's own notifications appear right where the menu sits and showed through.
+    private static readonly Color Plate = Rgb(27, 25, 24);
     private static readonly Color Edge = Rgb(112, 98, 80);
     private static readonly Color ButtonFill = Rgb(62, 58, 54);
     private static readonly Color ButtonHover = Rgb(86, 80, 73);
@@ -29,7 +30,7 @@ internal static class Theme
 
     public const float CheckSize = 18f;
 
-    public static GUIStyle Window, Title, Version, Label, LabelRight, Heading, Hint, Button, ButtonSelected, Field, FieldFocused, FieldEmpty;
+    public static GUIStyle Window, Title, Version, Label, LabelRight, Heading, Hint, Button, ButtonSelected, Field, FieldFocused, FieldEmpty, Notice;
 
     private static GUIStyle _empty, _thumb;
     private static GUISkin _skin;
@@ -100,6 +101,10 @@ internal static class Theme
         FieldFocused.normal.background = CutPlate(12, 12, Ink, Gold, 1, 0, 0);
         FieldFocused.normal.textColor = Color.white;
 
+        Notice = TextStyle(16, Gold, TextAnchor.MiddleCenter);
+        Notice.border = Sides(16);
+        Notice.normal.background = panel;
+
         _empty = new GUIStyle();
         _thumb = new GUIStyle { fixedWidth = 10f, fixedHeight = 16f };
         _thumb.normal.background = Solid(Text);
@@ -137,7 +142,7 @@ internal static class Theme
     {
         foreach (var style in new[] { Label, LabelRight, Hint, Version, Field, FieldFocused, FieldEmpty })
             style.font = _regular;
-        foreach (var style in new[] { Title, Heading, Button, ButtonSelected })
+        foreach (var style in new[] { Title, Heading, Button, ButtonSelected, Notice })
         {
             style.font = _bold;
             style.fontStyle = _bold == null ? FontStyle.Bold : FontStyle.Normal;
