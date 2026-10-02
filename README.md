@@ -18,7 +18,7 @@ a skipped hour or an odd position ends up in the next save like any other progre
 ## Install
 
 1. Install [BepInEx 6 (IL2CPP, x64)](https://builds.bepinex.dev/projects/bepinex_be) into the game folder and start the game once.
-2. Copy `NivalisToolBelt.dll` to `<game>\BepInEx\plugins\NivalisToolBelt\`.
+2. Download the zip from the [latest release](https://github.com/HiveSolution/nivalis-tool-belt/releases/latest) and extract it into the game folder, so that `NivalisToolBelt.dll` ends up in `<game>\BepInEx\plugins\NivalisToolBelt\`.
 
 Hotkeys and the slider range are in `<game>\BepInEx\config\renokk.nivalis.toolbelt.cfg` (created on first start).
 
@@ -51,3 +51,7 @@ line per second to `BepInEx\toolbelt-selftest.log` (player state, position, spee
 `tools\drive.ps1` has helpers to press real keys, click and take screenshots, and refuses to send
 input unless the game window is in the foreground. Back up the save folder first, delete the flag
 file afterwards, and deploy a normal build again before playing.
+
+## License
+
+Copyright (c) 2026 RenokK. Licensed under [CC BY-NC 4.0](LICENSE.txt). You may share and modify it for noncommercial purposes with attribution; commercial use, including reselling or bundling it into commercial products, is not permitted.
