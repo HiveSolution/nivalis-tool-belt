@@ -2,9 +2,9 @@
 
 A multi-tool sandbox mod for Nivalis Nights (BepInEx 6, IL2CPP). Press **F1** in-game to open the menu.
 
-The menu has three tabs.
+The menu has four tabs.
 
-**Player**
+**Move**
 
 | Tool | What it does |
 | --- | --- |
@@ -13,6 +13,14 @@ The menu has three tabs.
 
 Leaving fly mode with no ground underneath (over water, inside a building) would drop you out of the
 world, so the mod puts you back on the last spot you stood on.
+
+**Player**
+
+| Tool | What it does |
+| --- | --- |
+| Money | Add 100, 1,000 or 10,000, or remove 100 or 1,000. Added without a receipt, so it does not show up in the end-of-day balance. Never goes below zero. |
+| Skill levels | **-** and **+** for each skill (Trading, Boat, Cleaning, Cooking, Farming, Fishing, Business, Serving, Manager). Each click moves the skill to the start of the previous or next level. |
+| Unlock the boat | Sets the boat to unlocked if it is not yet. This skips whatever the story does to unlock it and cannot be undone from the menu. |
 
 **Time**
 
@@ -66,7 +74,8 @@ dotnet build -c Release -p:Deploy=true
 - `src/Plugin.cs`: BepInEx entry point.
 - `src/Settings.cs`: config entries (hotkeys).
 - `src/ToolBeltBehaviour.cs`: hotkeys, cursor handling, IMGUI menu.
-- `src/Sandbox.cs`: player tools (fly, speed, fall rescue).
+- `src/Sandbox.cs`: movement tools (fly, speed, fall rescue).
+- `src/Character.cs`: money, skill levels, boat.
 - `src/Clock.cs`: clock tools.
 - `src/Teleports.cs`: saved spots.
 - `src/SelfTest.cs`: scripted in-game test, only compiled with `-p:SelfTest=true`.

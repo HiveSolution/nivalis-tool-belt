@@ -92,7 +92,20 @@ internal static class SelfTest
                 clock = $"clock='{Clock.Text}' secs={TimeOfDayManager.TotalGameSeconds} daySecs={TimeOfDayManager.TotalDaySeconds} frozen={Clock.Frozen} tick={t.timeTickMultiplier} devMult={t.Dev_CurrentGameTimeMultiplier()} devScale={t.Dev_GetTimeScale()} override={t.TimeScaleOverride} unityScale={Time.timeScale} curfew={Clock.InCurfew} curfewHours={CurfewManager.CURFEW_WARNING_START_TIME_HOUR}/{CurfewManager.CURFEW_START_TIME_HOUR}/{CurfewManager.CURFEW_END_TIME_HOUR}";
             }
             string area = Singleton<GameSceneManager>.InstanceExist() ? $"scene='{Singleton<GameSceneManager>.Instance.CurrentGameplaySceneName}' area='{Teleports.AreaName}' spots={Teleports.Listed.Count} pending={Teleports.Pending?.Name} loading={Singleton<GameSceneManager>.Instance.IsLoading} canTravel={(Singleton<TravelManager>.InstanceExist() ? Singleton<TravelManager>.Instance.CanTravel.ToString() : "?")} canMove={(c == null ? "?" : c.CanMove.ToString())} money={(c == null ? 0 : Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Money)}" : "";
-            Write($"t={now:0} menu={menu.IsOpen} cursor={CursorModeManager.IsCursorActive} {player} {clock} {area}");
+            string character = "";
+            var skills = Character.Skills;
+            if (skills != null && c != null)
+            {
+                character = $"cents={Character.MoneyCents} boat={Character.HasBoat}/{Character.BoatUnlocked} skills=";
+                for (int i = 0; i < skills.Length; i++)
+                {
+                    var xp = Singleton<Nivalis.SkillSystem.SkillLevelController>.Instance.GetPlayerSkillExperience(skills[i]);
+                    character += $"[{skills[i].DisplayName}|{skills[i].name} lvl={xp.CurrentLevel} xp={xp.Experience} count={skills[i].LevelCount} need=";
+                    for (int l = 0; l < skills[i].LevelCount; l++) character += skills[i].GetExperienceForLevel(l) + ";";
+                    character += "]";
+                }
+            }
+            Write($"t={now:0} menu={menu.IsOpen} cursor={CursorModeManager.IsCursorActive} {player} {clock} {area} {character}");
         }
         catch (Exception e)
         {

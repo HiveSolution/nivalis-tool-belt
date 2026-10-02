@@ -17,7 +17,9 @@ public class ToolBeltBehaviour : MonoBehaviour
     private const float TitleBar = 24f;
     private const int MaxVisibleSpots = 6;
 
-    private static readonly string[] Tabs = { "Player", "Time", "Teleport" };
+    private static readonly string[] Tabs = { "Move", "Player", "Time", "Teleport" };
+    private static readonly int[] MoneySteps = { -1000, -100, 100, 1000, 10000 };
+    private static readonly string[] MoneyLabels = { "-1k", "-100", "+100", "+1k", "+10k" };
     private static readonly float[] ClockSpeeds = { 0.25f, 0.5f, 1f, 2f, 5f, 10f };
     private static readonly Color Selected = new Color(1f, 0.8f, 0.35f);
 
@@ -121,8 +123,9 @@ public class ToolBeltBehaviour : MonoBehaviour
                 if (Button(tabs[i], Tabs[i], _tab == i)) _tab = i;
             _y += 4f;
 
-            if (_tab == 0) DrawPlayer();
-            else if (_tab == 1) DrawTime();
+            if (_tab == 0) DrawMove();
+            else if (_tab == 1) DrawPlayer();
+            else if (_tab == 2) DrawTime();
             else DrawTeleport();
         }
 
@@ -134,6 +137,39 @@ public class ToolBeltBehaviour : MonoBehaviour
     }
 
     private void DrawPlayer()
+    {
+        GUI.Label(Row(), "Money  " + Number(Character.MoneyCents / 100f, "#,0.00"));
+        var amounts = Columns(MoneySteps.Length);
+        for (int i = 0; i < MoneySteps.Length; i++)
+            if (GUI.Button(amounts[i], MoneyLabels[i])) Character.AddMoney(MoneySteps[i] * 100);
+
+        var skills = Character.Skills;
+        if (skills != null && skills.Length > 0)
+        {
+            _y += 4f;
+            GUI.Label(Row(), "Skill levels");
+            for (int i = 0; i < skills.Length; i++)
+            {
+                var skill = skills[i];
+                int level = Character.GetLevel(skill);
+                var row = Row();
+                const float step = 28f;
+                // Shown from 1 like the game does; stored from 0.
+                GUI.Label(new Rect(row.x, row.y, row.width - 2f * (step + RowGap), row.height), $"{skill.DisplayName}  {level + 1} / {Character.MaxLevel(skill) + 1}");
+                if (GUI.Button(new Rect(row.xMax - 2f * step - RowGap, row.y, step, row.height), "-")) Character.SetLevel(skill, level - 1);
+                if (GUI.Button(new Rect(row.xMax - step, row.y, step, row.height), "+")) Character.SetLevel(skill, level + 1);
+            }
+        }
+
+        if (Character.HasBoat)
+        {
+            _y += 4f;
+            if (Character.BoatUnlocked) GUI.Label(Row(), "Boat: unlocked");
+            else if (GUI.Button(Row(), "Unlock the boat")) Character.UnlockBoat();
+        }
+    }
+
+    private void DrawMove()
     {
         bool fly = GUI.Toggle(Row(), Sandbox.Fly, $" Fly / ghost mode  [{Settings.FlyKey.Value}]");
         if (fly != Sandbox.Fly) Sandbox.Fly = fly;
