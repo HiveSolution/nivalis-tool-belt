@@ -25,6 +25,7 @@ internal static class SelfTest
     private static bool _loadRequested;
     private static float _nextStatus;
     private static int _shots;
+    private static bool _fontsDumped;
     private const string TestSlot = "toolbelt_test";
 
     public static void Tick(ToolBeltBehaviour menu)
@@ -92,6 +93,14 @@ internal static class SelfTest
                 clock = $"clock='{Clock.Text}' secs={TimeOfDayManager.TotalGameSeconds} daySecs={TimeOfDayManager.TotalDaySeconds} frozen={Clock.Frozen} tick={t.timeTickMultiplier} devMult={t.Dev_CurrentGameTimeMultiplier()} devScale={t.Dev_GetTimeScale()} override={t.TimeScaleOverride} unityScale={Time.timeScale} curfew={Clock.InCurfew} curfewHours={CurfewManager.CURFEW_WARNING_START_TIME_HOUR}/{CurfewManager.CURFEW_START_TIME_HOUR}/{CurfewManager.CURFEW_END_TIME_HOUR}";
             }
             string area = Singleton<GameSceneManager>.InstanceExist() ? $"scene='{Singleton<GameSceneManager>.Instance.CurrentGameplaySceneName}' area='{Teleports.AreaName}' spots={Teleports.Listed.Count} pending={Teleports.Pending?.Name} loading={Singleton<GameSceneManager>.Instance.IsLoading} canTravel={(Singleton<TravelManager>.InstanceExist() ? Singleton<TravelManager>.Instance.CanTravel.ToString() : "?")} canMove={(c == null ? "?" : c.CanMove.ToString())} money={(c == null ? 0 : Singleton<PlayerManager>.Instance.LocalPlayer.Inventory.Money)}" : "";
+            if (!_fontsDumped && c != null)
+            {
+                _fontsDumped = true;
+                foreach (var font in Resources.FindObjectsOfTypeAll<Font>())
+                    Write($"font '{font.name}' dynamic={font.dynamic} size={font.fontSize} names={string.Join(",", (string[])font.fontNames)}");
+                foreach (var asset in Resources.FindObjectsOfTypeAll<TMPro.TMP_FontAsset>())
+                    Write($"tmp font '{asset.name}' source={(asset.sourceFontFile == null ? "none" : asset.sourceFontFile.name)}");
+            }
             string character = "";
             var skills = Character.Skills;
             if (skills != null && c != null)

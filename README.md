@@ -74,6 +74,7 @@ dotnet build -c Release -p:Deploy=true
 - `src/Plugin.cs`: BepInEx entry point.
 - `src/Settings.cs`: config entries (hotkeys).
 - `src/ToolBeltBehaviour.cs`: hotkeys, cursor handling, IMGUI menu.
+- `src/Theme.cs`: the menu's look (generated textures, the game's Barlow Semi Condensed fonts, styles).
 - `src/Sandbox.cs`: movement tools (fly, speed, fall rescue).
 - `src/Character.cs`: money, skill levels, boat.
 - `src/Clock.cs`: clock tools.

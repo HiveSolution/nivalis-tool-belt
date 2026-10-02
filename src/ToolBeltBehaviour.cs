@@ -10,18 +10,19 @@ namespace NivalisToolBelt;
 public class ToolBeltBehaviour : MonoBehaviour
 {
     private const int WindowId = 0x4E544231; // "NTB1"
-    private const float Width = 300f;
-    private const float Pad = 12f;
-    private const float RowHeight = 24f;
-    private const float RowGap = 4f;
-    private const float TitleBar = 24f;
+    private const float Width = 330f;
+    private const float Pad = 16f;
+    private const float RowHeight = 26f;
+    private const float RowGap = 5f;
+    private const float SectionGap = 8f;
+    private const float SliderHeight = 18f;
+    private const float Header = 36f;
     private const int MaxVisibleSpots = 6;
 
     private static readonly string[] Tabs = { "Move", "Player", "Time", "Teleport" };
     private static readonly int[] MoneySteps = { -1000, -100, 100, 1000, 10000 };
     private static readonly string[] MoneyLabels = { "-1k", "-100", "+100", "+1k", "+10k" };
     private static readonly float[] ClockSpeeds = { 0.25f, 0.5f, 1f, 2f, 5f, 10f };
-    private static readonly Color Selected = new Color(1f, 0.8f, 0.35f);
 
     private Rect _window = new Rect(40f, 150f, Width, 200f);
     private GUI.WindowFunction _drawWindow;
@@ -94,7 +95,8 @@ public class ToolBeltBehaviour : MonoBehaviour
         if (!_open || _guiFailed) return;
         try
         {
-            _window = GUI.Window(WindowId, _window, _drawWindow, $"{Plugin.Name} {Plugin.Version}");
+            Theme.Ensure();
+            _window = GUI.Window(WindowId, _window, _drawWindow, "", Theme.Window);
         }
         catch (Exception e)
         {
@@ -105,23 +107,42 @@ public class ToolBeltBehaviour : MonoBehaviour
 
     private void DrawWindow(int id)
     {
-        _y = TitleBar + 4f;
+        // Scroll views take their scrollbar from the skin; everything else is styled per call.
+        var skin = GUI.skin;
+        GUI.skin = Theme.Skin;
+        try
+        {
+            DrawContents();
+        }
+        catch (Exception e)
+        {
+            _guiFailed = true;
+            Plugin.Logger.LogError($"Menu disabled, drawing failed: {e}");
+        }
+        finally
+        {
+            GUI.skin = skin;
+        }
+    }
 
-        // The default window skin is nearly see-through over a bright scene.
-        var backdrop = new Rect(0f, TitleBar - 4f, Width, _window.height - TitleBar + 4f);
-        GUI.Box(backdrop, "");
-        GUI.Box(backdrop, "");
+    private void DrawContents()
+    {
+        // The plate's top-right corner is cut, so the version sits a little further in.
+        GUI.Label(new Rect(Pad, 0f, Width - 2f * Pad, Header), "TOOL BELT", Theme.Title);
+        GUI.Label(new Rect(Pad, 0f, Width - 2f * Pad - 8f, Header), Plugin.Version, Theme.Version);
+        Theme.Rule(new Rect(1f, Header, Width - 2f, 2f), true);
+        _y = Header + 12f;
 
         if (!Sandbox.InGame)
         {
-            GUI.Label(Row(), "Load a save to use the tools.");
+            GUI.Label(Row(), "Load a save to use the tools.", Theme.Label);
         }
         else
         {
             var tabs = Columns(Tabs.Length);
             for (int i = 0; i < Tabs.Length; i++)
                 if (Button(tabs[i], Tabs[i], _tab == i)) _tab = i;
-            _y += 4f;
+            _y += SectionGap;
 
             if (_tab == 0) DrawMove();
             else if (_tab == 1) DrawPlayer();
@@ -129,104 +150,120 @@ public class ToolBeltBehaviour : MonoBehaviour
             else DrawTeleport();
         }
 
-        _y += 4f;
-        GUI.Label(Row(), $"[{Settings.MenuKey.Value}] closes this menu");
+        _y += SectionGap;
+        Theme.Rule(new Rect(Pad, _y, Width - 2f * Pad, 1f), false);
+        _y += RowGap;
+        GUI.Label(Row(20f), $"[{Settings.MenuKey.Value}] closes this menu", Theme.Hint);
 
         _window.height = _y + Pad - RowGap;
-        GUI.DragWindow(new Rect(0f, 0f, Width, TitleBar));
+        GUI.DragWindow(new Rect(0f, 0f, Width, Header));
+    }
+
+    private void DrawMove()
+    {
+        var row = Row();
+        bool fly = Theme.Toggle(row, Sandbox.Fly, "Fly / ghost mode");
+        GUI.Label(row, $"[{Settings.FlyKey.Value}]", Theme.Version);
+        if (fly != Sandbox.Fly) Sandbox.Fly = fly;
+        if (fly) GUI.Label(Row(20f), "E up, Q down, passes through walls", Theme.Hint);
+
+        _y += SectionGap;
+        Heading("Movement speed", "x" + Number(Sandbox.SpeedMultiplier, "0.0"));
+        float speed = Theme.Slider(Row(SliderHeight), Sandbox.SpeedMultiplier, 0.5f, Settings.MaxSpeedMultiplier.Value);
+        speed = Mathf.Round(speed * 10f) / 10f;
+        if (speed != Sandbox.SpeedMultiplier) Sandbox.SpeedMultiplier = speed;
+        if (Button(Row(), "Reset speed")) Sandbox.SpeedMultiplier = 1f;
     }
 
     private void DrawPlayer()
     {
-        GUI.Label(Row(), "Money  " + Number(Character.MoneyCents / 100f, "#,0.00"));
+        Heading("Money", Number(Character.MoneyCents / 100f, "#,0.00"));
         var amounts = Columns(MoneySteps.Length);
         for (int i = 0; i < MoneySteps.Length; i++)
-            if (GUI.Button(amounts[i], MoneyLabels[i])) Character.AddMoney(MoneySteps[i] * 100);
+            if (Button(amounts[i], MoneyLabels[i])) Character.AddMoney(MoneySteps[i] * 100);
 
         var skills = Character.Skills;
         if (skills != null && skills.Length > 0)
         {
-            _y += 4f;
-            GUI.Label(Row(), "Skill levels");
+            _y += SectionGap;
+            Heading("Skill levels");
             for (int i = 0; i < skills.Length; i++)
             {
                 var skill = skills[i];
                 int level = Character.GetLevel(skill);
                 var row = Row();
                 const float step = 28f;
+                var text = new Rect(row.x, row.y, row.width - 2f * (step + RowGap) - 4f, row.height);
+                GUI.Label(text, skill.DisplayName, Theme.Label);
                 // Shown from 1 like the game does; stored from 0.
-                GUI.Label(new Rect(row.x, row.y, row.width - 2f * (step + RowGap), row.height), $"{skill.DisplayName}  {level + 1} / {Character.MaxLevel(skill) + 1}");
-                if (GUI.Button(new Rect(row.xMax - 2f * step - RowGap, row.y, step, row.height), "-")) Character.SetLevel(skill, level - 1);
-                if (GUI.Button(new Rect(row.xMax - step, row.y, step, row.height), "+")) Character.SetLevel(skill, level + 1);
+                GUI.Label(text, $"{level + 1} / {Character.MaxLevel(skill) + 1}", Theme.LabelRight);
+                if (Button(new Rect(row.xMax - 2f * step - RowGap, row.y, step, row.height), "-")) Character.SetLevel(skill, level - 1);
+                if (Button(new Rect(row.xMax - step, row.y, step, row.height), "+")) Character.SetLevel(skill, level + 1);
             }
         }
 
         if (Character.HasBoat)
         {
-            _y += 4f;
-            if (Character.BoatUnlocked) GUI.Label(Row(), "Boat: unlocked");
-            else if (GUI.Button(Row(), "Unlock the boat")) Character.UnlockBoat();
+            _y += SectionGap;
+            if (Character.BoatUnlocked)
+            {
+                Heading("Boat", "Unlocked");
+            }
+            else
+            {
+                Heading("Boat", "Locked");
+                if (Button(Row(), "Unlock the boat")) Character.UnlockBoat();
+            }
         }
-    }
-
-    private void DrawMove()
-    {
-        bool fly = GUI.Toggle(Row(), Sandbox.Fly, $" Fly / ghost mode  [{Settings.FlyKey.Value}]");
-        if (fly != Sandbox.Fly) Sandbox.Fly = fly;
-        if (fly) GUI.Label(Row(), "      E up, Q down, passes through walls");
-
-        GUI.Label(Row(), "Movement speed  x" + Number(Sandbox.SpeedMultiplier, "0.0"));
-        float speed = GUI.HorizontalSlider(Row(16f), Sandbox.SpeedMultiplier, 0.5f, Settings.MaxSpeedMultiplier.Value);
-        speed = Mathf.Round(speed * 10f) / 10f;
-        if (speed != Sandbox.SpeedMultiplier) Sandbox.SpeedMultiplier = speed;
-        if (GUI.Button(Row(), "Reset speed")) Sandbox.SpeedMultiplier = 1f;
     }
 
     private void DrawTime()
     {
         if (!Clock.Available)
         {
-            GUI.Label(Row(), "No clock in this scene.");
+            GUI.Label(Row(), "No clock in this scene.", Theme.Label);
             return;
         }
 
-        GUI.Label(Row(), Clock.Text);
-        bool frozen = GUI.Toggle(Row(), Clock.Frozen, " Freeze clock");
+        Heading("Clock", Clock.Text);
+        bool frozen = Theme.Toggle(Row(), Clock.Frozen, "Freeze clock");
         if (frozen != Clock.Frozen) Clock.Frozen = frozen;
 
-        GUI.Label(Row(), "Clock speed");
+        _y += SectionGap;
+        Heading("Clock speed");
         var speeds = Columns(ClockSpeeds.Length);
         for (int i = 0; i < ClockSpeeds.Length; i++)
             if (Button(speeds[i], "x" + Number(ClockSpeeds[i], "0.##"), Clock.SpeedMultiplier == ClockSpeeds[i]))
                 Clock.SpeedMultiplier = ClockSpeeds[i];
 
-        _y += 4f;
+        _y += SectionGap;
+        Heading("Skip ahead");
         if (Clock.InCurfew)
         {
-            GUI.Label(Row(), "Curfew: sleep to start the next day.");
+            GUI.Label(Row(), "Curfew: sleep to start the next day.", Theme.Label);
             return;
         }
-        if (GUI.Button(Row(), "Skip 1 hour")) Clock.SkipHours(1);
-        _skipToHour = Mathf.RoundToInt(GUI.HorizontalSlider(Row(16f), _skipToHour, 0f, 23f));
+        if (Button(Row(), "Skip 1 hour")) Clock.SkipHours(1);
+        _skipToHour = Mathf.RoundToInt(Theme.Slider(Row(SliderHeight), _skipToHour, 0f, 23f));
         string target = Clock.CurfewComesBefore(_skipToHour) ? $"curfew ({Clock.CurfewHour:00}:00)" : $"{_skipToHour:00}:00";
-        if (GUI.Button(Row(), $"Skip ahead to {target}")) Clock.SkipTo(_skipToHour);
+        if (Button(Row(), $"Skip to {target}")) Clock.SkipTo(_skipToHour);
     }
 
     private void DrawTeleport()
     {
         if (Teleports.Pending != null)
         {
-            GUI.Label(Row(), $"Travelling to {Teleports.Pending.Name}...");
+            GUI.Label(Row(), $"Travelling to {Teleports.Pending.Name}...", Theme.Label);
             return;
         }
 
-        GUI.Label(Row(), $"You are in {Teleports.AreaName}");
-        if (GUI.Button(Row(), "Save current position")) Teleports.SaveCurrent();
+        Heading("Saved spots", $"You are in {Teleports.AreaName}");
+        if (Button(Row(), "Save current position")) Teleports.SaveCurrent();
 
         var spots = Teleports.Listed;
         if (spots.Count == 0)
         {
-            GUI.Label(Row(), "No saved spots yet.");
+            GUI.Label(Row(), "No saved spots yet.", Theme.Label);
             return;
         }
 
@@ -234,7 +271,7 @@ public class ToolBeltBehaviour : MonoBehaviour
         const float removeWidth = 28f;
         bool scrolls = spots.Count > MaxVisibleSpots;
         float listWidth = Width - 2f * Pad;
-        float innerWidth = scrolls ? listWidth - 18f : listWidth;
+        float innerWidth = scrolls ? listWidth - 14f : listWidth;
         var area = new Rect(Pad, _y, listWidth, Mathf.Min(spots.Count, MaxVisibleSpots) * line);
         _y += area.height;
 
@@ -246,8 +283,8 @@ public class ToolBeltBehaviour : MonoBehaviour
             float y = (scrolls ? 0f : area.y) + i * line;
             // Spots in other areas need a trip there first; the game shows its usual travel transition.
             string label = Teleports.IsHere(spots[i]) ? spots[i].Name : spots[i].Name + "  (travel)";
-            if (GUI.Button(new Rect(x, y, innerWidth - removeWidth - RowGap, RowHeight), label)) go = spots[i];
-            if (GUI.Button(new Rect(x + innerWidth - removeWidth, y, removeWidth, RowHeight), "X")) remove = spots[i];
+            if (Button(new Rect(x, y, innerWidth - removeWidth - RowGap, RowHeight), label)) go = spots[i];
+            if (Button(new Rect(x + innerWidth - removeWidth, y, removeWidth, RowHeight), "X")) remove = spots[i];
         }
         if (scrolls) GUI.EndScrollView();
 
@@ -257,13 +294,16 @@ public class ToolBeltBehaviour : MonoBehaviour
         if (go != null && Teleports.Go(go)) SetOpen(false);
     }
 
-    private static bool Button(Rect rect, string text, bool selected)
+    /// <summary>The game writes its button and heading text in capitals.</summary>
+    private static bool Button(Rect rect, string text, bool selected = false) =>
+        GUI.Button(rect, text.ToUpperInvariant(), selected ? Theme.ButtonSelected : Theme.Button);
+
+    /// <summary>A gold section heading, optionally with a value on the right of the same row.</summary>
+    private void Heading(string text, string value = null)
     {
-        var color = GUI.color;
-        if (selected) GUI.color = Selected;
-        bool clicked = GUI.Button(rect, text);
-        GUI.color = color;
-        return clicked;
+        var row = Row(22f);
+        GUI.Label(row, text.ToUpperInvariant(), Theme.Heading);
+        if (value != null) GUI.Label(row, value, Theme.LabelRight);
     }
 
     private static string Number(float value, string format) => value.ToString(format, CultureInfo.InvariantCulture);
