@@ -91,9 +91,11 @@ internal static class Sandbox
     // nothing underneath, or (as a net for anything that check misses) once they are in free fall.
     private static void TrackSafeSpot(PlayerCharacterController controller)
     {
-        // Between areas there is no scene and the player drops freely until the game places them.
+        // Between areas (and while the new one still loads, when its name is already set) the player
+        // drops freely until the game places them. On a slow load that fall is fast enough to look
+        // like falling out of the world, and used to switch fly mode on by itself.
         string scene = Teleports.CurrentScene;
-        if (scene == null)
+        if (scene == null || Singleton<GameSceneManager>.Instance.IsLoading)
         {
             _hasSafeSpot = false;
             return;
