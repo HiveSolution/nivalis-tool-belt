@@ -7,6 +7,8 @@ namespace NivalisToolBelt;
 internal static class Settings
 {
     public const int MaxStorageMultiplier = 10;
+    public const float MinMenuScale = 0.5f;
+    public const float MaxMenuScale = 3f;
 
     public static ConfigEntry<KeyboardShortcut> MenuKey;
     public static ConfigEntry<KeyboardShortcut> FlyKey;
@@ -14,6 +16,7 @@ internal static class Settings
     public static ConfigEntry<KeyboardShortcut> BoatFuelKey;
     public static ConfigEntry<KeyboardShortcut> GrowthKey;
     public static ConfigEntry<float> MaxSpeedMultiplier;
+    public static ConfigEntry<float> MenuScale;
     public static ConfigEntry<int> StorageMultiplier;
 
     public static void Bind(ConfigFile config)
@@ -30,6 +33,8 @@ internal static class Settings
             "Toggles instant growth in your greenhouses.");
         MaxSpeedMultiplier = config.Bind("Menu", "MaxSpeedMultiplier", 5f,
             new ConfigDescription("Upper end of the movement speed slider.", new AcceptableValueRange<float>(2f, 20f)));
+        MenuScale = config.Bind("Menu", "Scale", 1f,
+            new ConfigDescription("Size of the menu, 1 is normal. Set from the menu.", new AcceptableValueRange<float>(MinMenuScale, MaxMenuScale)));
         // Kept between sessions, unlike the switches: items stored beyond the normal space depend on it.
         StorageMultiplier = config.Bind("Venues", "StorageMultiplier", 1,
             new ConfigDescription("How many times the normal storage space your venues have. Set from the menu.", new AcceptableValueRange<int>(1, MaxStorageMultiplier)));

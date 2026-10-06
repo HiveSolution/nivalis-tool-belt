@@ -9,7 +9,7 @@ public class Plugin : BasePlugin
 {
     public const string Guid = "renokk.nivalis.toolbelt";
     public const string Name = "Nivalis Tool Belt";
-    public const string Version = "1.0.1";
+    public const string Version = "1.1.0";
 
     internal static ManualLogSource Logger;
 

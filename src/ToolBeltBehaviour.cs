@@ -28,7 +28,7 @@ public class ToolBeltBehaviour : MonoBehaviour
     private const int MaxFieldLength = 40;
     private const int TabsPerRow = 4;
 
-    private static readonly string[] Tabs = { "Move", "Player", "Items", "People", "Property", "Time", "Teleport" };
+    private static readonly string[] Tabs = { "General","Player", "Items", "People", "Property", "Time", "Teleport" };
     private static readonly string[] ItemModes = { "Catalogue", "Inventory" };
     private static readonly string[] PropertyKinds = { "Venues", "Apartments", "Greenhouses" };
     private const string RenameField = "spot-rename";
@@ -54,6 +54,7 @@ public class ToolBeltBehaviour : MonoBehaviour
     private string _notice = "";
     private float _noticeUntil;
     private int _tab;
+    private float _draggedScale = -1f;
     private int _skipToHour = 6;
     private Vector2 _spotScroll;
     private Vector2 _itemScroll;
@@ -200,7 +201,19 @@ public class ToolBeltBehaviour : MonoBehaviour
         try
         {
             Theme.Ensure();
-            if (notice) GUI.Label(new Rect((Screen.width - NoticeWidth) / 2f, 190f, NoticeWidth, 34f), _notice, Theme.Notice);
+            // A new scale would move the slider away from the mouse mid-drag, so it waits for the release.
+            if (_draggedScale > 0f && GUIUtility.hotControl == 0)
+            {
+                Settings.MenuScale.Value = _draggedScale;
+                _draggedScale = -1f;
+            }
+            float scale = Settings.MenuScale.Value;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
+            float screenWidth = Screen.width / scale;
+            // Keep the title bar on screen, or a bigger scale could push the menu out of reach.
+            _window.x = Mathf.Clamp(_window.x, 0f, Mathf.Max(0f, screenWidth - Width));
+            _window.y = Mathf.Clamp(_window.y, 0f, Mathf.Max(0f, Screen.height / scale - Header));
+            if (notice) GUI.Label(new Rect((screenWidth - NoticeWidth) / 2f, 190f, NoticeWidth, 34f), _notice, Theme.Notice);
             if (_open) _window = GUI.Window(WindowId, _window, _drawWindow, "", Theme.Window);
         }
         catch (Exception e)
@@ -259,7 +272,7 @@ public class ToolBeltBehaviour : MonoBehaviour
 
             switch (Tabs[_tab])
             {
-                case "Move": DrawMove(); break;
+                case "General": DrawGeneral(); break;
                 case "Player": DrawPlayer(); break;
                 case "Items": DrawItems(); break;
                 case "People": DrawPeople(); break;
@@ -358,7 +371,7 @@ public class ToolBeltBehaviour : MonoBehaviour
         return text;
     }
 
-    private void DrawMove()
+    private void DrawGeneral()
     {
         var row = Row();
         bool fly = Theme.Toggle(row, Sandbox.Fly, "Fly / ghost mode");
@@ -382,6 +395,18 @@ public class ToolBeltBehaviour : MonoBehaviour
         speed = Mathf.Round(speed * 10f) / 10f;
         if (speed != Sandbox.SpeedMultiplier) Sandbox.SpeedMultiplier = speed;
         if (Button(Row(), "Reset speed")) Sandbox.SpeedMultiplier = 1f;
+
+        _y += SectionGap;
+        float scale = _draggedScale > 0f ? _draggedScale : Settings.MenuScale.Value;
+        Heading("Menu scale", "x" + Number(scale, "0.0"));
+        float picked = Theme.Slider(Row(SliderHeight), scale, Settings.MinMenuScale, Settings.MaxMenuScale);
+        picked = Mathf.Round(picked * 10f) / 10f;
+        if (picked != scale) _draggedScale = picked;
+        if (Button(Row(), "Reset scale"))
+        {
+            _draggedScale = -1f;
+            Settings.MenuScale.Value = 1f;
+        }
     }
 
     private void DrawPlayer()

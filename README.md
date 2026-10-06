@@ -4,9 +4,9 @@ A multi-tool sandbox mod for Nivalis Nights (BepInEx 6, IL2CPP). Press **F1** in
 
 ![The tool belt menu open while flying over the Docks](docs/screenshots/in-game.jpg)
 
-| Move | Player | Items | People |
+| General | Player | Items | People |
 | --- | --- | --- | --- |
-| ![Move tab](docs/screenshots/move.png) | ![Player tab](docs/screenshots/player.png) | ![Items tab](docs/screenshots/items.png) | ![People tab](docs/screenshots/people.png) |
+| ![General tab](docs/screenshots/general.png) | ![Player tab](docs/screenshots/player.png) | ![Items tab](docs/screenshots/items.png) | ![People tab](docs/screenshots/people.png) |
 
 | Property | Time | Teleport |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ A multi-tool sandbox mod for Nivalis Nights (BepInEx 6, IL2CPP). Press **F1** in
 
 The menu has seven tabs.
 
-**Move**
+**General**
 
 | Tool | What it does |
 | --- | --- |
@@ -22,6 +22,7 @@ The menu has seven tabs.
 | Undetected during curfew (**F3**) | The curfew's cameras and drones do not notice you. Switching it off during a curfew arms them again at once. |
 | Unlimited boat fuel (**F4**) | Keeps the boat's tank full. |
 | Movement speed | Multiplier for walk, sprint and fly speed (x0.5 to x5). |
+| Menu scale | Size of the menu, x0.5 to x3 (x1 is normal), for large or high-resolution screens. Applied when you let go of the slider and kept between sessions. |
 
 Leaving fly mode with no ground underneath (over water, inside a building) would drop you out of the
 world, so the mod puts you back on the last spot you stood on.
@@ -113,7 +114,7 @@ skipped time or an odd position ends up in the next save like any other progress
 1. Install [BepInEx 6 (IL2CPP, x64)](https://builds.bepinex.dev/projects/bepinex_be) into the game folder and start the game once.
 2. Download the zip from the [latest release](https://github.com/HiveSolution/nivalis-tool-belt/releases/latest) and extract it into the game folder, so that `NivalisToolBelt.dll` ends up in `<game>\BepInEx\plugins\NivalisToolBelt\`.
 
-The hotkeys (F1 menu, F2 fly, F3 undetected, F4 boat fuel, F6 instant growth) and the slider range can
+The hotkeys (F1 menu, F2 fly, F3 undetected, F4 boat fuel, F6 instant growth), the speed slider range and the menu scale can
 be changed in `<game>\BepInEx\config\renokk.nivalis.toolbelt.cfg` (created on first start).
 
 ## Build
